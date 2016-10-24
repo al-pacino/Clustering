@@ -10,6 +10,11 @@ class CDissimilarityMatrix {
 public:
 	typedef DISTANCE_TYPE DistanceType;
 
+	CDissimilarityMatrix() :
+		size( 0 )
+	{
+	}
+
 	CDissimilarityMatrix( CDissimilarityMatrix&& matrix )
 	{
 		*this = move( matrix );
@@ -31,6 +36,26 @@ public:
 		return distances[i * size + j];
 	}
 
+	void Load( istream& input )
+	{
+		bool good = false;
+		distances.clear();
+		if( input.good() && input >> size ) {
+			distances.reserve( size * size );
+			DistanceType distance;
+			while( input.good() && input >> distance ) {
+				distances.push_back( distance );
+			}
+			if( distances.size() == size * size ) {
+				good = true;
+			}
+		}
+		if( !good ) {
+			size = 0;
+			distances.clear();
+		}
+	}
+
 	void Save( ostream& output ) const
 	{
 		output << size;
@@ -42,11 +67,6 @@ public:
 protected:
 	size_t size;
 	vector<DistanceType> distances;
-
-	CDissimilarityMatrix() :
-		size( 0 )
-	{
-	}
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -97,28 +117,6 @@ public:
 			++begin;
 		}
 		return builder.Build();
-	}
-
-	static DissimilarityMatrixType Load( istream& input )
-	{
-		CDissimilarityMatrixBuilder builder;
-
-		size_t size = 0;
-		vector<DistanceType> distances;
-		if( input.good() && input >> size ) {
-			distances.reserve( size * size );
-			DistanceType distance;
-			while( input.good() && input >> distance ) {
-				distances.push_back( distance );
-			}
-
-			if( distances.size() == size * size ) {
-				builder.DissimilarityMatrixType::size = size;
-				builder.distances = move( distances );
-			}
-		}
-
-		return move( static_cast<DissimilarityMatrixType&>( builder ) );
 	}
 };
 
