@@ -43,23 +43,12 @@ public:
 		return ( objectMedoids[object] == object );
 	}
 	// build operations
-	DistanceType ObjectDistanceToAll( size_t object ) const;
+	DistanceType FindObjectDistanceToAll( size_t object ) const;
 	void AddMedoid( size_t object );
 	DistanceType AddMedoidProfit( size_t object ) const;
 	// swap operatations
 	void Swap( size_t medoid, size_t object );
-	DistanceType SwapResult( size_t medoid, size_t j, size_t object ) const;
-
-private:
-	void findObjectMedoids();
-	DistanceType distanceToMedoid( size_t object ) const
-	{
-		return matrix.Distance( object, objectMedoids[object] );
-	}
-	DistanceType distanceToSecondMedoid( size_t object ) const
-	{
-		return matrix.Distance( object, objectSecondMedoids[object] );
-	}
+	DistanceType SwapResult( size_t medoid, size_t object ) const;
 
 private:
 	const DissimilarityMatrixType& matrix;
@@ -68,13 +57,24 @@ private:
 	vector<size_t> medoids;
 	vector<size_t> objectMedoids;
 	vector<size_t> objectSecondMedoids;
+
+	DistanceType distanceToMedoid( size_t object ) const
+	{
+		return matrix.Distance( object, objectMedoids[object] );
+	}
+	DistanceType distanceToSecondMedoid( size_t object ) const
+	{
+		return matrix.Distance( object, objectSecondMedoids[object] );
+	}
+	void findObjectMedoids();
+	DistanceType swapResult( size_t medoid, size_t j, size_t object ) const;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 
 template<typename DMT>
 typename CPartitioningAroundMedois<DMT>::DistanceType
-CPartitioningAroundMedois<DMT>::ObjectDistanceToAll( size_t object ) const
+CPartitioningAroundMedois<DMT>::FindObjectDistanceToAll( size_t object ) const
 {
 	assert( object < NumberOfObjects() );
 
@@ -105,11 +105,11 @@ void CPartitioningAroundMedois<DMT>::AddMedoid( size_t medoid )
 	} else {
 		// calculate new objectMedoids
 		for( size_t object = 0; object < NumberOfObjects(); object++ ) {
-			if( isMedoid( object ) ) {
+			if( IsMedoid( object ) ) {
 				continue; // if object is medoid
 			}
 
-			if( matrix.Distance( object, medoid ) < DistanceToMedoid( object ) ) {
+			if( matrix.Distance( object, medoid ) < distanceToMedoid( object ) ) {
 				objectMedoids[object] = medoid;
 			}
 		}
@@ -136,8 +136,8 @@ CPartitioningAroundMedois<DMT>::AddMedoidProfit( size_t object ) const
 			continue; // if anotherObject is object or medoid
 		}
 
-		if( matrix.Distance( object, anotherObject ) < DistanceToMedoid( anotherObject ) ) {
-			profit += DistanceToMedoid( anotherObject ) - matrix.Distance( object, anotherObject );
+		if( matrix.Distance( object, anotherObject ) < distanceToMedoid( anotherObject ) ) {
+			profit += distanceToMedoid( anotherObject ) - matrix.Distance( object, anotherObject );
 		}
 	}
 
@@ -150,7 +150,7 @@ void CPartitioningAroundMedois<DMT>::Swap( size_t medoid, size_t object )
 	assert( object < NumberOfObjects() );
 	assert( State() == Swapping );
 
-	auto mi = medoids.find( medoid );
+	auto mi = find( medoids.begin(), medoids.end(), medoid );
 	assert( mi != medoids.end() );
 	*mi = object;
 
@@ -159,34 +159,22 @@ void CPartitioningAroundMedois<DMT>::Swap( size_t medoid, size_t object )
 
 template<typename DMT>
 typename CPartitioningAroundMedois<DMT>::DistanceType
-CPartitioningAroundMedois<DMT>::SwapResult( size_t medoid, size_t j, size_t object ) const
+CPartitioningAroundMedois<DMT>::SwapResult( size_t medoid, size_t object ) const
 {
 	assert( medoid < NumberOfObjects() );
-	assert( j < NumberOfObjects() );
 	assert( object < NumberOfObjects() );
 	assert( IsMedoid( medoid ) );
-	assert( !IsMedoid( j ) );
 	assert( !IsMedoid( object ) );
 	assert( State() == Swapping );
 
-	if( objectMedoids[j] == medoid ) {
-		// medoid is medoid of j-object
-		if( distanceToSecondMedoid( j ) > matrix.Distance( j, object ) ) {
-			// object is new medoid of j-object
-			return ( matrix.Distance( j, object ) - distanceToMedoid( j ) );
-		} else {
-			// second j-object medoid is new medoid of j-object
-			return ( distanceToSecondMedoid( j ) - distanceToMedoid( j ) );
+	DistanceType result = 0;
+	for( size_t j = 0; j < NumberOfObjects(); j++ ) {
+		if( j == object || IsMedoid( j ) ) {
+			continue; // if j is object or medoid
 		}
-	} else {
-		// medoid is NOT medoid of j-object
-		if( distanceToMedoid( j ) > matrix.Distance( j, object ) ) {
-			// object is new medoid of j-object
-			return ( matrix.Distance( j, object ) - distanceToMedoid( j ) );
-		} else {
-			return 0;
-		}
+		result += swapResult( medoid, j, object );
 	}
+	return result;
 }
 
 template<typename DMT>
@@ -216,6 +204,30 @@ void CPartitioningAroundMedois<DMT>::findObjectMedoids()
 		assert( objectMedoid < NumberOfObjects() && objectSecondMedoid < NumberOfObjects() );
 		objectMedoids[i] = objectMedoid;
 		objectSecondMedoids[i] = objectSecondMedoid;
+	}
+}
+
+template<typename DMT>
+typename CPartitioningAroundMedois<DMT>::DistanceType
+CPartitioningAroundMedois<DMT>::swapResult( size_t medoid, size_t j, size_t object ) const
+{
+	if( objectMedoids[j] == medoid ) {
+		// medoid is medoid of j-object
+		if( distanceToSecondMedoid( j ) > matrix.Distance( j, object ) ) {
+			// object is new medoid of j-object
+			return ( matrix.Distance( j, object ) - distanceToMedoid( j ) );
+		} else {
+			// second j-object medoid is new medoid of j-object
+			return ( distanceToSecondMedoid( j ) - distanceToMedoid( j ) );
+		}
+	} else {
+		// medoid is NOT medoid of j-object
+		if( distanceToMedoid( j ) > matrix.Distance( j, object ) ) {
+			// object is new medoid of j-object
+			return ( matrix.Distance( j, object ) - distanceToMedoid( j ) );
+		} else {
+			return 0;
+		}
 	}
 }
 
