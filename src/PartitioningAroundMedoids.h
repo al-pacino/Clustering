@@ -33,6 +33,7 @@ public:
 	}
 
 	const DissimilarityMatrixType& DissimilarityMatrix() const { return matrix; }
+	size_t NumberOfObjects() const { return matrix.Size(); }
 	size_t NumberOfClusters() const { return numberOfClusters; }
 	StateType State() const { return state; }
 	const vector<size_t>& Medoids() const { return medoids; }
@@ -75,10 +76,13 @@ template<typename DMT>
 typename CPartitioningAroundMedois<DMT>::DistanceType
 CPartitioningAroundMedois<DMT>::ObjectDistanceToAll( size_t object ) const
 {
+	assert( object < NumberOfObjects() );
+
 	DistanceType distance = 0;
-	for( size_t anotherObject = 0; anotherObject < matrix.Size(); anotherObject++ ) {
+	for( size_t anotherObject = 0; anotherObject < NumberOfObjects(); anotherObject++ ) {
 		distance += matrix.Distance( object, anotherObject );
 	}
+
 	return distance;
 }
 
@@ -86,6 +90,7 @@ template<typename DMT>
 void CPartitioningAroundMedois<DMT>::AddMedoid( size_t medoid )
 {
 	assert( State() == Initializing || State() == Building );
+	assert( medoid < NumberOfObjects() );
 	assert( medoids.empty() == ( State() == Initializing ) );
 	assert( medoids.size() < NumberOfClusters() );
 
@@ -95,10 +100,11 @@ void CPartitioningAroundMedois<DMT>::AddMedoid( size_t medoid )
 		for( size_t& objectMedoid : objectMedoids ) {
 			objectMedoid = 0;
 		}
+
 		state = Building;
 	} else {
 		// calculate new objectMedoids
-		for( size_t object = 0; object < matrix.Size(); object++ ) {
+		for( size_t object = 0; object < NumberOfObjects(); object++ ) {
 			if( isMedoid( object ) ) {
 				continue; // if object is medoid
 			}
@@ -110,6 +116,7 @@ void CPartitioningAroundMedois<DMT>::AddMedoid( size_t medoid )
 
 		if( medoids.size() == NumberOfClusters() ) {
 			state = Swapping;
+
 			findObjectMedoids();
 		}
 	}
@@ -120,10 +127,11 @@ typename CPartitioningAroundMedois<DMT>::DistanceType
 CPartitioningAroundMedois<DMT>::AddMedoidProfit( size_t object ) const
 {
 	assert( State() == Building );
+	assert( object < NumberOfObjects() );
 	assert( !IsMedoid( object ) );
 
 	DistanceType profit = 0;
-	for( size_t anotherObject = 0; anotherObject < matrix.Size(); anotherObject++ ) {
+	for( size_t anotherObject = 0; anotherObject < NumberOfObjects(); anotherObject++ ) {
 		if( object == anotherObject || IsMedoid( anotherObject ) ) {
 			continue; // if anotherObject is object or medoid
 		}
@@ -139,6 +147,7 @@ CPartitioningAroundMedois<DMT>::AddMedoidProfit( size_t object ) const
 template<typename DMT>
 void CPartitioningAroundMedois<DMT>::Swap( size_t medoid, size_t object )
 {
+	assert( object < NumberOfObjects() );
 	assert( State() == Swapping );
 
 	auto mi = medoids.find( medoid );
@@ -152,6 +161,12 @@ template<typename DMT>
 typename CPartitioningAroundMedois<DMT>::DistanceType
 CPartitioningAroundMedois<DMT>::SwapResult( size_t medoid, size_t j, size_t object ) const
 {
+	assert( medoid < NumberOfObjects() );
+	assert( j < NumberOfObjects() );
+	assert( object < NumberOfObjects() );
+	assert( IsMedoid( medoid ) );
+	assert( !IsMedoid( j ) );
+	assert( !IsMedoid( object ) );
 	assert( State() == Swapping );
 
 	if( objectMedoids[j] == medoid ) {
@@ -179,10 +194,10 @@ void CPartitioningAroundMedois<DMT>::findObjectMedoids()
 {
 	assert( State() != Initializing );
 
-	for( size_t i = 0; i < matrix.Size(); i++ ) {
-		size_t objectMedoid = matrix.Size();
+	for( size_t i = 0; i < NumberOfObjects(); i++ ) {
+		size_t objectMedoid = NumberOfObjects();
 		DistanceType objectMedoidDistance = numeric_limits<DistanceType>::max();
-		size_t objectSecondMedoid = matrix.Size();
+		size_t objectSecondMedoid = NumberOfObjects();
 		DistanceType objectSecondMedoidDistance = numeric_limits<DistanceType>::max();
 
 		for( const size_t medoid : medoids ) {
@@ -198,7 +213,7 @@ void CPartitioningAroundMedois<DMT>::findObjectMedoids()
 			}
 		}
 
-		assert( objectMedoid < matrix.Size() && objectSecondMedoid < matrix.Size() );
+		assert( objectMedoid < NumberOfObjects() && objectSecondMedoid < NumberOfObjects() );
 		objectMedoids[i] = objectMedoid;
 		objectSecondMedoids[i] = objectSecondMedoid;
 	}
