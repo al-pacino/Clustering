@@ -33,12 +33,12 @@ int main( int argc, const char* argv[] )
 
 		// Initializing
 		cout << "Building...0" << endl;
-		size_t centralObject = pam.NumberOfObjects();
-		CVector::DistanceType maxDistance = 0;
-		for( size_t object = 0; object < pam.NumberOfObjects(); object++ ) {
+		size_t centralObject = 0;
+		CVector::DistanceType minDistance = pam.FindObjectDistanceToAll( 0 );
+		for( size_t object = 1; object < pam.NumberOfObjects(); object++ ) {
 			const CVector::DistanceType distance = pam.FindObjectDistanceToAll( object );
-			if( distance > maxDistance ) {
-				maxDistance = distance;
+			if( distance < minDistance ) {
+				minDistance = distance;
 				centralObject = object;
 			}
 		}
