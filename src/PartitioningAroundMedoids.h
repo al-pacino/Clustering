@@ -169,7 +169,7 @@ CPartitioningAroundMedois<DMT>::SwapResult( size_t medoid, size_t object ) const
 
 	DistanceType result = 0;
 	for( size_t j = 0; j < NumberOfObjects(); j++ ) {
-		if( j == object || IsMedoid( j ) ) {
+		if( j != medoid && IsMedoid( j ) ) {
 			continue; // if j is object or medoid
 		}
 		result += swapResult( medoid, j, object );
