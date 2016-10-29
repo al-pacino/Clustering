@@ -163,7 +163,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="src\DissimilarityMatrix.h" />
-    <ClInclude Include="src\Errors.h" />
     <ClInclude Include="src\MpiInitializer.h" />
     <ClInclude Include="src\PartitioningAroundMedoids.h" />
     <ClInclude Include="src\Vector2d.h" />

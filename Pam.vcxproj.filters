@@ -15,9 +15,6 @@
     <ClInclude Include="src\Vector2d.h">
       <Filter>Src</Filter>
     </ClInclude>
-    <ClInclude Include="src\Errors.h">
-      <Filter>Src</Filter>
-    </ClInclude>
     <ClInclude Include="src\MpiInitializer.h">
       <Filter>Src</Filter>
     </ClInclude>
