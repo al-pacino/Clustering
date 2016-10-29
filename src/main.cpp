@@ -10,9 +10,10 @@
 
 using namespace std;
 
-#include "Vector2d.h"
-#include "DissimilarityMatrix.h"
-#include "PartitioningAroundMedoids.h"
+#include <MpiInitializer.h>
+#include <Vector2d.h>
+#include <DissimilarityMatrix.h>
+#include <PartitioningAroundMedoids.h>
 
 int main( int argc, const char* argv[] )
 {
