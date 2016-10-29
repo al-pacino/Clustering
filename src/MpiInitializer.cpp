@@ -9,7 +9,10 @@ using namespace std;
 
 void MpiCheck( const int mpiResult, const string& mpiFunctionName )
 {
-	throw exception( ( "MPI function '" + mpiFunctionName + "' failed!" ).c_str() );
+	if( mpiResult != MPI_SUCCESS ) {
+		throw exception( ( "MPI function '" + mpiFunctionName + "' failed"
+			"with code '" + to_string( mpiResult ) + "'." ).c_str() );
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
