@@ -1,12 +1,15 @@
 #include <cassert>
+#include <mutex>
 #include <limits>
 #include <vector>
 #include <string>
+#include <thread>
 #include <fstream>
 #include <iostream>
 #include <exception>
 #include <algorithm>
 #include <unordered_map>
+#include <condition_variable>
 
 using namespace std;
 
@@ -18,6 +21,56 @@ using namespace std;
 typedef float DistanceType;
 typedef CVector2d<DistanceType> CVector;
 typedef CDissimilarityMatrix<DistanceType> DissimilarityMatrixType;
+typedef CPartitioningAroundMedois<DissimilarityMatrixType> PamType;
+
+///////////////////////////////////////////////////////////////////////////////
+
+class CBarrier {
+	CBarrier( const CBarrier& ) = delete;
+	CBarrier& operator=( const CBarrier& ) = delete;
+
+public:
+	explicit CBarrier( size_t _numberOfThreads ) :
+		numberOfThreads( _numberOfThreads ),
+		counter( 0 ),
+		isCountingDown( false )
+	{
+		if( numberOfThreads == 0 ) {
+			throw invalid_argument( "CBarrier: number of threads must be positive" );
+		}
+	}
+
+	void Sync()
+	{
+		unique_lock<mutex> lock{ m };
+
+		if( isCountingDown ) {
+			counter--;
+			if( counter == 0 ) {
+				isCountingDown = false;
+				cv.notify_all();
+			} else {
+				cv.wait( lock, [this]{ return !isCountingDown; } );
+			}
+		} else {
+			counter++;
+			if( counter == numberOfThreads ) {
+				isCountingDown = true;
+				cv.notify_all();
+			} else {
+				cv.wait( lock, [this]{ return isCountingDown; } );
+			}
+		}
+	}
+
+private:
+	mutex m;
+	condition_variable cv;
+
+	size_t counter;
+	const size_t numberOfThreads;
+	bool isCountingDown;
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -36,6 +89,7 @@ struct CObjectMedoidDistance {
 	{
 	}
 
+	void Min( const CObjectMedoidDistance& another );
 	void AllReduce();
 
 private:
@@ -45,6 +99,13 @@ private:
 		CObjectMedoidDistance* in, CObjectMedoidDistance* inout,
 		int* length, MPI_Datatype* /*type*/ );
 };
+
+void CObjectMedoidDistance::Min( const CObjectMedoidDistance& another )
+{
+	if( another.Distance < Distance ) {
+		*this = another;
+	}
+}
 
 void CObjectMedoidDistance::AllReduce()
 {
@@ -85,13 +146,55 @@ void MPIAPI CObjectMedoidDistance::objectMedoidDistanceMin(
 	int* length, MPI_Datatype* /*type*/ )
 {
 	for( int i = 0; i < *length; i++ ) {
-		if( in[i].Distance < inout[i].Distance ) {
-			inout[i] = in[i];
-		}
+		inout[i].Min( in[i] );
 	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+// Initializing or Build  step
+void DoBuildStep( PamType& pam, CObjectMedoidDistance& best,
+	const size_t objectBegin, const size_t objectEnd )
+{
+	best.Distance = numeric_limits<DistanceType>::max();
+	best.Object = objectBegin;
+	for( size_t object = objectBegin; object < objectEnd; object++ ) {
+		if( pam.IsMedoid( object ) ) {
+			continue; // if object is medoid
+		}
+
+		const DistanceType distance = ( pam.State() == PamType::Initializing ) ?
+			pam.FindObjectDistanceToAll( object ) : -pam.AddMedoidProfit( object );
+
+		if( distance < best.Distance ) {
+			best.Distance = distance;
+			best.Object = object;
+		}
+	}
+}
+
+// Swap step
+void DoSwapStep( PamType& pam, CObjectMedoidDistance& best,
+	const size_t objectBegin, const size_t objectEnd )
+{
+	best.Distance = 0;
+	best.Medoid = pam.Medoids().front();
+	best.Object = objectBegin;
+
+	for( size_t object = objectBegin; object < objectEnd; object++ ) {
+		if( pam.IsMedoid( object ) ) {
+			continue; // if object is medoid
+		}
+		for( const size_t medoid : pam.Medoids() ) {
+			DistanceType distance = pam.SwapResult( medoid, object );
+			if( distance < best.Distance ) {
+				best.Distance = distance;
+				best.Medoid = medoid;
+				best.Object = object;
+			}
+		}
+	}
+}
 
 void CalcBeginEndObjects(
 	const size_t numberOfObjects, const size_t numberOfProcess, const size_t rank,
@@ -106,77 +209,104 @@ void CalcBeginEndObjects(
 	}
 }
 
-void DoPam( const size_t numberOfClusters, const DissimilarityMatrixType& matrix )
+void PamThread( PamType& pam,
+	vector<CObjectMedoidDistance>& bests, CBarrier& barrier,
+	size_t threadIndex,
+	const size_t objectBegin, const size_t objectEnd )
 {
-	typedef CPartitioningAroundMedois<DissimilarityMatrixType> PamType;
-	PamType pam( matrix, numberOfClusters );
+#ifdef _DEBUG
+	static mutex coutMutex;
+#endif
 
-	size_t objectBegin = 0;
-	size_t objectEnd = 0;
-	CalcBeginEndObjects( pam.NumberOfObjects(),
-		CMpiInitializer::NumberOfProccess(), CMpiInitializer::Rank(),
-		objectBegin, objectEnd );
-
-	CObjectMedoidDistance best;
 
 	// Building and Initializing
 	for( size_t i = 0; i < pam.NumberOfClusters(); i++ ) {
 #ifdef _DEBUG
-		cout << "Building..." << i << endl;
-#endif
-		best.Distance = numeric_limits<DistanceType>::max();
-		best.Object = objectBegin;
-		for( size_t object = objectBegin; object < objectEnd; object++ ) {
-			if( pam.IsMedoid( object ) ) {
-				continue; // if object is medoid
-			}
-
-			const DistanceType distance = ( pam.State() == PamType::Initializing ) ?
-				pam.FindObjectDistanceToAll( object ) : -pam.AddMedoidProfit( object );
-
-			if( distance < best.Distance ) {
-				best.Distance = distance;
-				best.Object = object;
-			}
+		{
+			unique_lock<mutex> lock{ coutMutex };
+			cout << CMpiInitializer::Rank() << "," << threadIndex << " ["
+				<< objectBegin << ", " << objectEnd << ") "
+				<< "Building..." << i << endl;
 		}
-		best.AllReduce();
-		pam.AddMedoid( best.Object );
+#endif
+		DoBuildStep( pam, bests[threadIndex], objectBegin, objectEnd );
+
+		barrier.Sync();
+
+		if( threadIndex == 0 ) {
+			for( CObjectMedoidDistance& objectMedoidDistance : bests ) {
+				bests.front().Min( objectMedoidDistance );
+			}
+			bests.front().AllReduce();
+			pam.AddMedoid( bests.front().Object );
+		}
+
+		barrier.Sync();
 	}
 
 	// Swapping
 	for( size_t iteration = 0; iteration < 1000; iteration++ ) {
 #ifdef _DEBUG
-		cout << "Swapping..." << iteration << endl;
+		{
+			unique_lock<mutex> lock{ coutMutex };
+			cout << CMpiInitializer::Rank() << "," << threadIndex << ": " << "Swapping..." << iteration << endl;
+		}
 #endif
-		best.Distance = 0;
-		best.Medoid = pam.Medoids().front();
-		best.Object = objectBegin;
+		DoSwapStep( pam, bests[threadIndex], objectBegin, objectEnd );
 
-		for( size_t object = objectBegin; object < objectEnd; object++ ) {
-			if( pam.IsMedoid( object ) ) {
-				continue; // if object is medoid
+		barrier.Sync();
+
+		if( threadIndex == 0 ) {
+			for( CObjectMedoidDistance& objectMedoidDistance : bests ) {
+				bests.front().Min( objectMedoidDistance );
 			}
-			for( const size_t medoid : pam.Medoids() ) {
-				DistanceType distance = pam.SwapResult( medoid, object );
-				if( distance < best.Distance ) {
-					best.Distance = distance;
-					best.Medoid = medoid;
-					best.Object = object;
-				}
+			bests.front().AllReduce();
+			if( bests.front().Distance < 0 ) {
+				pam.Swap( bests.front().Medoid, bests.front().Object );
 			}
 		}
 
-		best.AllReduce();
+		barrier.Sync();
 
-		if( best.Distance < 0 ) {
-			pam.Swap( best.Medoid, best.Object );
-		} else {
+		if( !( bests.front().Distance < 0 ) ) {
 			break;
 		}
+
+		barrier.Sync();
+	}
+}
+
+void DoPam( const size_t numberOfClusters, const DissimilarityMatrixType& matrix,
+	size_t numberOfThreads = 1 )
+{
+	typedef CPartitioningAroundMedois<DissimilarityMatrixType> PamType;
+	PamType pam( matrix, numberOfClusters );
+
+	vector<thread> threads;
+	threads.reserve( numberOfThreads );
+	vector<CObjectMedoidDistance> bests( numberOfThreads );
+	CBarrier barrier( numberOfThreads );
+
+	for( size_t threadIndex = 0; threadIndex < numberOfThreads; threadIndex++ ) {
+		size_t objectBegin = 0;
+		size_t objectEnd = 0;
+		CalcBeginEndObjects( pam.NumberOfObjects(),
+			CMpiInitializer::NumberOfProccess() * numberOfThreads,
+			CMpiInitializer::Rank() * numberOfThreads + threadIndex,
+			objectBegin, objectEnd );
+
+		threads.emplace_back( PamThread,
+			ref( pam ), ref( bests ), ref( barrier ),
+			threadIndex, objectBegin, objectEnd );
+	}
+
+	for( thread& t : threads ) {
+		t.join();
 	}
 
 #ifdef _DEBUG
 	if( CMpiInitializer::Rank() == 0 ) {
+		cout << endl;
 		unordered_map<size_t, size_t> medoidToClusterId;
 		for( size_t object = 0; object < pam.NumberOfObjects(); object++ ) {
 			auto pair = medoidToClusterId.insert(
@@ -189,16 +319,17 @@ void DoPam( const size_t numberOfClusters, const DissimilarityMatrixType& matrix
 
 void DoMain( const int argc, const char* const argv[] )
 {
-	if( argc != 3 ) {
+	if( argc < 3 || argc > 4 ) {
 		throw exception( "too few arguments!\n"
-			"Usage: pam NUMBER_OF_CLUSTERS DISSIMILARITY_MATRIX_FILENAME" );
+			"Usage: pam NUMBER_OF_CLUSTERS DISSIMILARITY_MATRIX_FILENAME [NUMBER_OF_THREADS]" );
 	}
 
 	const size_t numberOfClusters = stoul( argv[1] );
 	DissimilarityMatrixType matrix;
 	matrix.Load( ifstream( argv[2] ) );
+	const size_t numberOfThreads = ( argc == 4 ) ? stoul( argv[3] ) : 1;
 
-	DoPam( numberOfClusters, matrix );
+	DoPam( numberOfClusters, matrix, numberOfThreads );
 }
 
 int main( int argc, char** argv )
