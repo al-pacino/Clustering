@@ -17,26 +17,26 @@ public:
 	static void Finalize();
 	static void Abort( int code );
 	static bool Initialized() { return initialized; }
-	static int Rank();
-	static int NumberOfProccess();
+	static size_t Rank();
+	static size_t NumberOfProccess();
 
 private:
 	static bool initialized;
-	static int rank;
-	static int numberOfProccess;
+	static size_t rank;
+	static size_t numberOfProccess;
 
 	static void checkInitialized();
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 
-inline int CMpiInitializer::Rank()
+inline size_t CMpiInitializer::Rank()
 {
 	checkInitialized();
 	return rank;
 }
 
-inline int CMpiInitializer::NumberOfProccess()
+inline size_t CMpiInitializer::NumberOfProccess()
 {
 	checkInitialized();
 	return numberOfProccess;

@@ -18,8 +18,8 @@ void MpiCheck( const int mpiResult, const string& mpiFunctionName )
 ///////////////////////////////////////////////////////////////////////////////
 
 bool CMpiInitializer::initialized = false;
-int CMpiInitializer::rank = 0;
-int CMpiInitializer::numberOfProccess = 0;
+size_t CMpiInitializer::rank = 0;
+size_t CMpiInitializer::numberOfProccess = 0;
 
 void CMpiInitializer::Initialize( int* argc, char*** argv )
 {
@@ -27,8 +27,11 @@ void CMpiInitializer::Initialize( int* argc, char*** argv )
 		throw logic_error( "MPI was already initialized!" );
 	}
 	MpiCheck( MPI_Init( argc, argv ), "MPI_Init" );
-	MpiCheck( MPI_Comm_rank( MPI_COMM_WORLD, &rank ), "MPI_Comm_rank" );
-	MpiCheck( MPI_Comm_size( MPI_COMM_WORLD, &numberOfProccess ), "MPI_Comm_size" );
+	int tmp;
+	MpiCheck( MPI_Comm_rank( MPI_COMM_WORLD, &tmp ), "MPI_Comm_rank" );
+	rank = static_cast<size_t>( tmp );
+	MpiCheck( MPI_Comm_size( MPI_COMM_WORLD, &tmp ), "MPI_Comm_size" );
+	numberOfProccess = static_cast<size_t>( tmp );
 	initialized = true;
 }
 
