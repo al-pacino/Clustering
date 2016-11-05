@@ -4,14 +4,12 @@ project(PamMPI)
 
 find_package(MPI REQUIRED)
 
-add_definitions( "-std=c++0x" )
-
-include_directories( src )
+include_directories( src_nothreads )
 include_directories( ${MPI_INCLUDE_PATH} )
 
 set(SOURCE
-	src/MpiSupport.cpp
-	src/main.cpp)
+	src_nothreads/MpiSupport.cpp
+	src_nothreads/main.cpp)
 
 add_executable(pam ${SOURCE})
 
