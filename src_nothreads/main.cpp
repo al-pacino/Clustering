@@ -130,10 +130,9 @@ void DoSwapStep( PamType& pam, CObjectMedoidDistance& best,
 		if( pam.IsMedoid( object ) ) {
 			continue; // if object is medoid
 		}
-		for( vector<size_t>::const_iterator i = pam.Medoids().begin();
-			i != pam.Medoids().end(); ++i )
-		{
-			const size_t medoid = *i;
+
+		for( size_t i = 0; i < pam.Medoids().size(); i++ ) {
+			const size_t medoid = pam.Medoids()[i];
 			DistanceType distance = pam.SwapResult( medoid, object );
 			if( distance < best.Distance ) {
 				best.Distance = distance;

@@ -54,6 +54,7 @@ public:
 		for( ++distance; distance != distances.end(); ++distance ) {
 			output << " " << *distance;
 		}
+		output << endl;
 	}
 
 protected:
@@ -76,7 +77,7 @@ public:
 
 	CDissimilarityMatrixBuilder( size_t numberOfObjects )
 	{
-		reserve( numberOfObjects );
+		vector<OBJECT_TYPE>::reserve( numberOfObjects );
 	}
 
 	void Build( DissimilarityMatrixType& matrix )

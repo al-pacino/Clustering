@@ -94,10 +94,7 @@ void CPartitioningAroundMedois<DMT>::AddMedoid( size_t medoid )
 	medoids.push_back( medoid );
 
 	if( State() == Initializing ) {
-		for( size_t& objectMedoid : objectMedoids ) {
-			objectMedoid = 0;
-		}
-
+		fill( objectMedoids.begin(), objectMedoids.end(), 0 );
 		state = Building;
 	} else {
 		// calculate new objectMedoids
@@ -185,7 +182,8 @@ void CPartitioningAroundMedois<DMT>::findObjectMedoids()
 		size_t objectSecondMedoid = NumberOfObjects();
 		DistanceType objectSecondMedoidDistance = numeric_limits<DistanceType>::max();
 
-		for( const size_t medoid : medoids ) {
+		for( size_t medoidIndex = 0; medoidIndex < medoids.size(); medoidIndex++ ) {
+			const size_t medoid = medoids[medoidIndex];
 			const DistanceType distance = matrix.Distance( medoid, i );
 			if( distance < objectMedoidDistance ) {
 				objectSecondMedoid = objectMedoid;
