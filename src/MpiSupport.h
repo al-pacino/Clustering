@@ -9,8 +9,8 @@ void MpiCheck( const int mpiResult, const string& mpiFunctionName );
 
 ///////////////////////////////////////////////////////////////////////////////
 
-class CMpiInitializer {
-	CMpiInitializer() = delete;
+class CMpiSupport {
+	CMpiSupport() = delete;
 
 public:
 	static void Initialize( int* argc, char*** argv );
@@ -19,6 +19,7 @@ public:
 	static bool Initialized() { return initialized; }
 	static size_t Rank();
 	static size_t NumberOfProccess();
+	static void Barrier();
 
 private:
 	static bool initialized;
@@ -30,13 +31,13 @@ private:
 
 ///////////////////////////////////////////////////////////////////////////////
 
-inline size_t CMpiInitializer::Rank()
+inline size_t CMpiSupport::Rank()
 {
 	checkInitialized();
 	return rank;
 }
 
-inline size_t CMpiInitializer::NumberOfProccess()
+inline size_t CMpiSupport::NumberOfProccess()
 {
 	checkInitialized();
 	return numberOfProccess;

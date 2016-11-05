@@ -13,7 +13,7 @@
 
 using namespace std;
 
-#include <MpiInitializer.h>
+#include <MpiSupport.h>
 #include <Vector2d.h>
 #include <DissimilarityMatrix.h>
 #include <PartitioningAroundMedoids.h>
@@ -224,7 +224,7 @@ void PamThread( PamType& pam,
 #ifdef _DEBUG
 		{
 			unique_lock<mutex> lock{ coutMutex };
-			cout << CMpiInitializer::Rank() << "," << threadIndex << " ["
+			cout << CMpiSupport::Rank() << "," << threadIndex << " ["
 				<< objectBegin << ", " << objectEnd << ") "
 				<< "Building..." << i << endl;
 		}
@@ -249,7 +249,8 @@ void PamThread( PamType& pam,
 #ifdef _DEBUG
 		{
 			unique_lock<mutex> lock{ coutMutex };
-			cout << CMpiInitializer::Rank() << "," << threadIndex << ": " << "Swapping..." << iteration << endl;
+			cout << CMpiSupport::Rank() << "," << threadIndex <<
+				": " << "Swapping..." << iteration << endl;
 		}
 #endif
 		DoSwapStep( pam, bests[threadIndex], objectBegin, objectEnd );
@@ -291,8 +292,8 @@ void DoPam( const size_t numberOfClusters, const DissimilarityMatrixType& matrix
 		size_t objectBegin = 0;
 		size_t objectEnd = 0;
 		CalcBeginEndObjects( pam.NumberOfObjects(),
-			CMpiInitializer::NumberOfProccess() * numberOfThreads,
-			CMpiInitializer::Rank() * numberOfThreads + threadIndex,
+			CMpiSupport::NumberOfProccess() * numberOfThreads,
+			CMpiSupport::Rank() * numberOfThreads + threadIndex,
 			objectBegin, objectEnd );
 
 		threads.emplace_back( PamThread,
@@ -305,7 +306,7 @@ void DoPam( const size_t numberOfClusters, const DissimilarityMatrixType& matrix
 	}
 
 #ifdef _DEBUG
-	if( CMpiInitializer::Rank() == 0 ) {
+	if( CMpiSupport::Rank() == 0 ) {
 		cout << endl;
 		unordered_map<size_t, size_t> medoidToClusterId;
 		for( size_t object = 0; object < pam.NumberOfObjects(); object++ ) {
@@ -351,16 +352,16 @@ void DoMain( const int argc, const char* const argv[] )
 int main( int argc, char** argv )
 {
 	try {
-		CMpiInitializer::Initialize( &argc, &argv );
+		CMpiSupport::Initialize( &argc, &argv );
 		DoMain( argc, argv );
-		CMpiInitializer::Finalize();
+		CMpiSupport::Finalize();
 	} catch( exception& e ) {
 		cerr << "Error: " << e.what() << endl;
-		CMpiInitializer::Abort( 1 );
+		CMpiSupport::Abort( 1 );
 		return 1;
 	} catch( ... ) {
 		cerr << "Unknown error!" << endl;
-		CMpiInitializer::Abort( 2 );
+		CMpiSupport::Abort( 2 );
 		return 2;
 	}
 

@@ -163,13 +163,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="src\DissimilarityMatrix.h" />
-    <ClInclude Include="src\MpiInitializer.h" />
+    <ClInclude Include="src\MpiSupport.h" />
     <ClInclude Include="src\PartitioningAroundMedoids.h" />
     <ClInclude Include="src\Vector2d.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\MpiInitializer.cpp" />
+    <ClCompile Include="src\MpiSupport.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

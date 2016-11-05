@@ -3,7 +3,7 @@
 
 using namespace std;
 
-#include <MpiInitializer.h>
+#include <MpiSupport.h>
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -17,11 +17,11 @@ void MpiCheck( const int mpiResult, const string& mpiFunctionName )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool CMpiInitializer::initialized = false;
-size_t CMpiInitializer::rank = 0;
-size_t CMpiInitializer::numberOfProccess = 0;
+bool CMpiSupport::initialized = false;
+size_t CMpiSupport::rank = 0;
+size_t CMpiSupport::numberOfProccess = 0;
 
-void CMpiInitializer::Initialize( int* argc, char*** argv )
+void CMpiSupport::Initialize( int* argc, char*** argv )
 {
 	if( Initialized() ) {
 		throw logic_error( "MPI was already initialized!" );
@@ -35,24 +35,29 @@ void CMpiInitializer::Initialize( int* argc, char*** argv )
 	initialized = true;
 }
 
-void CMpiInitializer::Finalize()
+void CMpiSupport::Finalize()
 {
 	checkInitialized();
 	MPI_Finalize();
 }
 
-void CMpiInitializer::Abort( int code )
+void CMpiSupport::Abort( int code )
 {
 	if( Initialized() ) {
 		MPI_Abort( MPI_COMM_WORLD, code );
 	}
 }
 
-inline void CMpiInitializer::checkInitialized()
+inline void CMpiSupport::checkInitialized()
 {
 	if( !Initialized() ) {
 		throw logic_error( "MPI was not initialized yet!" );
 	}
+}
+
+void CMpiSupport::Barrier()
+{
+	MpiCheck( MPI_Barrier( MPI_COMM_WORLD ), "MPI_Barrier" );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
