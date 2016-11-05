@@ -49,7 +49,7 @@ public:
 	void Save( ostream& output ) const
 	{
 		output << size << endl;
-		vector<DistanceType>::const_iterator distance = distances.begin();
+		typename vector<DistanceType>::const_iterator distance = distances.begin();
 		output << *distance;
 		for( ++distance; distance != distances.end(); ++distance ) {
 			output << " " << *distance;
@@ -90,7 +90,9 @@ public:
 				if( i == j ) {
 					matrix.distances.push_back( 0 );
 				} else {
-					matrix.distances.push_back( operator[]( i ).Distance( operator[]( j ) ) );
+					matrix.distances.push_back(
+						vector<OBJECT_TYPE>::operator[]( i ).Distance(
+							vector<OBJECT_TYPE>::operator[]( j ) ) );
 				}
 			}
 		}

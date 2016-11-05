@@ -1,5 +1,6 @@
 #include <string>
 #include <exception>
+#include <stdexcept>
 
 using namespace std;
 
@@ -10,7 +11,7 @@ using namespace std;
 void MpiCheck( const int mpiResult, const string& mpiFunctionName )
 {
 	if( mpiResult != MPI_SUCCESS ) {
-		throw exception( ( "MPI function '" + mpiFunctionName + "' failed" ).c_str() );
+		throw domain_error( ( "MPI function '" + mpiFunctionName + "' failed" ).c_str() );
 	}
 }
 

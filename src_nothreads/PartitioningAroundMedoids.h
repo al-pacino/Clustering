@@ -144,7 +144,7 @@ void CPartitioningAroundMedois<DMT>::Swap( size_t medoid, size_t object )
 	assert( object < NumberOfObjects() );
 	assert( State() == Swapping );
 
-	auto mi = find( medoids.begin(), medoids.end(), medoid );
+	vector<size_t>::iterator mi = find( medoids.begin(), medoids.end(), medoid );
 	assert( mi != medoids.end() );
 	*mi = object;
 

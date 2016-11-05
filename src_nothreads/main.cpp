@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cassert>
 #include <map>
 #include <limits>
@@ -5,8 +6,9 @@
 #include <string>
 #include <fstream>
 #include <iostream>
-#include <exception>
 #include <algorithm>
+#include <exception>
+#include <stdexcept>
 
 using namespace std;
 
@@ -227,16 +229,16 @@ void BuildDissimilarityMatrix( istream& input, DissimilarityMatrixType& matrix )
 		input >> unused >> vectors[i].X >> vectors[i].Y;
 	}
 	if( input.fail() ) {
-		throw exception( "bad vectors file format!" );
+		throw domain_error( "bad vectors file format!" );
 	}
 	CDissimilarityMatrixBuilder<CVector>::Build( matrix, vectors.begin(), vectors.end() );
 }
 
 void DoMain( const int argc, const char* const argv[] )
 {
-	if( argc < 3 || argc > 4 ) {
-		throw exception( "too few arguments!\n"
-			"Usage: pam NUMBER_OF_CLUSTERS VECTORS_FILENAME [NUMBER_OF_THREADS]" );
+	if( argc != 3 ) {
+		throw domain_error( "too few arguments!\n"
+			"Usage: pam NUMBER_OF_CLUSTERS VECTORS_FILENAME" );
 	}
 
 	double readDataTime = 0.0;
@@ -247,7 +249,8 @@ void DoMain( const int argc, const char* const argv[] )
 	DissimilarityMatrixType matrix;
 	{
 		CMpiTimer timer( readDataTime );
-		BuildDissimilarityMatrix( ifstream( argv[2] ), matrix );
+		ifstream input( argv[2] );
+		BuildDissimilarityMatrix( input, matrix );
 	}
 
 	{
