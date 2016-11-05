@@ -86,7 +86,7 @@ public:
 	{
 	}
 
-	explicit CDissimilarityMatrixBuilder( size_t numberOfObject )
+	explicit CDissimilarityMatrixBuilder( size_t numberOfObjects )
 	{
 		reserve( numberOfObjects );
 	}
