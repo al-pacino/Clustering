@@ -320,17 +320,16 @@ void DoPam( const size_t numberOfClusters, const DissimilarityMatrixType& matrix
 
 DissimilarityMatrixType BuildDissimilarityMatrix( istream& input )
 {
-	size_t unused;
-	size_t numberOfVectors;
+	size_t unused = 0;
+	size_t numberOfVectors = 0;
 	input >> unused >> numberOfVectors;
-	CVector vector;
-	CDissimilarityMatrixBuilder<CVector> builder;
+	vector<CVector> vectors;
+	vectors.resize( numberOfVectors );
 	for( size_t i = 0; input.good() && i < numberOfVectors; i++ ) {
-		input >> unused >> vector.X >> vector.Y;
-		builder.push_back( vector );
+		input >> unused >> vectors[i].X >> vectors[i].Y;
 	}
 	if( !input.fail() ) {
-		return builder.Build();
+		return CDissimilarityMatrixBuilder<CVector>::Build( vectors.begin(), vectors.end() );
 	}
 	throw exception( "bad vectors file format!" );
 }
