@@ -318,7 +318,7 @@ void DoPam( const size_t numberOfClusters, const DissimilarityMatrixType& matrix
 #endif
 }
 
-DissimilarityMatrixType BuildDissimilarityMatrixType( istream& input )
+DissimilarityMatrixType BuildDissimilarityMatrix( istream& input )
 {
 	size_t unused;
 	size_t numberOfVectors;
@@ -349,7 +349,7 @@ void DoMain( const int argc, const char* const argv[] )
 	DissimilarityMatrixType matrix;
 	{
 		CMpiTimer timer( readDataTime );
-		matrix = BuildDissimilarityMatrixType( ifstream( argv[2] ) );
+		matrix = BuildDissimilarityMatrix( ifstream( argv[2] ) );
 	}
 	const size_t numberOfThreads = ( argc == 4 ) ? stoul( argv[3] ) : 1;
 
