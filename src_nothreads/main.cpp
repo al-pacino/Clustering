@@ -24,6 +24,10 @@ typedef CPartitioningAroundMedois<DissimilarityMatrixType> PamType;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifndef MPIAPI
+#define MPIAPI
+#endif
+
 struct CObjectMedoidDistance {
 	unsigned long int Object;
 	unsigned long int Medoid;
@@ -42,8 +46,7 @@ struct CObjectMedoidDistance {
 private:
 	static MPI_Datatype datatype();
 	static MPI_Op op();
-	static void MPIAPI objectMedoidDistanceMin(
-		CObjectMedoidDistance* in, CObjectMedoidDistance* inout,
+	static void MPIAPI objectMedoidDistanceMin( void* in, void* inout,
 		int* length, MPI_Datatype* /*type*/ );
 };
 
@@ -82,16 +85,18 @@ MPI_Op CObjectMedoidDistance::op()
 {
 	static MPI_Op op = MPI_OP_NULL;
 	if( op == MPI_OP_NULL ) {
-		MpiCheck( MPI_Op_create( (MPI_User_function*)objectMedoidDistanceMin,
+		MpiCheck( MPI_Op_create( objectMedoidDistanceMin,
 			false /* commute */, &op ), "MPI_Op_create for CObjectMedoidDistance" );
 	}
 	return op;
 }
 
 void MPIAPI CObjectMedoidDistance::objectMedoidDistanceMin(
-	CObjectMedoidDistance* in, CObjectMedoidDistance* inout,
+	void* _in, void* _inout,
 	int* length, MPI_Datatype* /*type*/ )
 {
+	CObjectMedoidDistance* in = reinterpret_cast<CObjectMedoidDistance*>( _in );
+	CObjectMedoidDistance* inout = reinterpret_cast<CObjectMedoidDistance*>( _inout );
 	for( int i = 0; i < *length; i++ ) {
 		inout[i].Min( in[i] );
 	}
