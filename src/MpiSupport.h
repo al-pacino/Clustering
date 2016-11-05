@@ -44,3 +44,32 @@ inline size_t CMpiSupport::NumberOfProccess()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+class CMpiTimer {
+	CMpiTimer( const CMpiTimer& ) = delete;
+	CMpiTimer& operator=( const CMpiTimer& ) = delete;
+
+public:
+	CMpiTimer( double& executionTime ) :
+		time( executionTime ),
+		startTime( getTime() )
+	{
+	}
+	~CMpiTimer()
+	{
+		const double finishTime = getTime();
+		time = finishTime - startTime;
+	}
+
+private:
+	double& time;
+	const double startTime;
+
+	static double getTime()
+	{
+		CMpiSupport::Barrier();
+		return MPI_Wtime();
+	}
+};
+
+///////////////////////////////////////////////////////////////////////////////

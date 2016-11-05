@@ -342,11 +342,23 @@ void DoMain( const int argc, const char* const argv[] )
 			"Usage: pam NUMBER_OF_CLUSTERS VECTORS_FILENAME [NUMBER_OF_THREADS]" );
 	}
 
+	double readDataTime = 0.0;
+	double pamTime = 0.0;
+
 	const size_t numberOfClusters = stoul( argv[1] );
-	DissimilarityMatrixType matrix = BuildDissimilarityMatrixType( ifstream( argv[2] ) );
+	DissimilarityMatrixType matrix;
+	{
+		CMpiTimer timer( readDataTime );
+		matrix = BuildDissimilarityMatrixType( ifstream( argv[2] ) );
+	}
 	const size_t numberOfThreads = ( argc == 4 ) ? stoul( argv[3] ) : 1;
 
-	DoPam( numberOfClusters, matrix, numberOfThreads );
+	{
+		CMpiTimer timer( pamTime );
+		DoPam( numberOfClusters, matrix, numberOfThreads );
+	}
+
+	cout << CMpiSupport::Rank() << "\t" << readDataTime << "\t" << pamTime << endl;
 }
 
 int main( int argc, char** argv )
