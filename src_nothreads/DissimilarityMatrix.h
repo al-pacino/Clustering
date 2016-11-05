@@ -48,9 +48,11 @@ public:
 
 	void Save( ostream& output ) const
 	{
-		output << size;
-		for( const DistanceType distance : distances ) {
-			output << " " << distance;
+		output << size << endl;
+		vector<DistanceType>::const_iterator distance = distances.begin();
+		output << *distance;
+		for( ++distance; distance != distances.end(); ++distance ) {
+			output << " " << *distance;
 		}
 	}
 
