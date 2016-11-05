@@ -317,16 +317,32 @@ void DoPam( const size_t numberOfClusters, const DissimilarityMatrixType& matrix
 #endif
 }
 
+DissimilarityMatrixType BuildDissimilarityMatrixType( istream& input )
+{
+	size_t unused;
+	size_t numberOfVectors;
+	input >> unused >> numberOfVectors;
+	CVector vector;
+	CDissimilarityMatrixBuilder<CVector> builder;
+	for( size_t i = 0; input.good() && i < numberOfVectors; i++ ) {
+		input >> unused >> vector.X >> vector.Y;
+		builder.push_back( vector );
+	}
+	if( !input.fail() ) {
+		return builder.Build();
+	}
+	throw exception( "bad vectors file format!" );
+}
+
 void DoMain( const int argc, const char* const argv[] )
 {
 	if( argc < 3 || argc > 4 ) {
 		throw exception( "too few arguments!\n"
-			"Usage: pam NUMBER_OF_CLUSTERS DISSIMILARITY_MATRIX_FILENAME [NUMBER_OF_THREADS]" );
+			"Usage: pam NUMBER_OF_CLUSTERS VECTORS_FILENAME [NUMBER_OF_THREADS]" );
 	}
 
 	const size_t numberOfClusters = stoul( argv[1] );
-	DissimilarityMatrixType matrix;
-	matrix.Load( ifstream( argv[2] ) );
+	DissimilarityMatrixType matrix = BuildDissimilarityMatrixType( ifstream( argv[2] ) );
 	const size_t numberOfThreads = ( argc == 4 ) ? stoul( argv[3] ) : 1;
 
 	DoPam( numberOfClusters, matrix, numberOfThreads );
