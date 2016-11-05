@@ -48,7 +48,7 @@ void CMpiSupport::Abort( int code )
 	}
 }
 
-inline void CMpiSupport::checkInitialized()
+void CMpiSupport::checkInitialized()
 {
 	if( !Initialized() ) {
 		throw logic_error( "MPI was not initialized yet!" );
